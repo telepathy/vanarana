@@ -25,6 +25,9 @@ func (s *Store) UpsertPipelineRun(ctx context.Context, repoID int, jobName, buil
 	if err != nil {
 		return nil, err
 	}
+	if pr.ID == 0 {
+		return s.GetPipelineRunByKey(ctx, repoID, jobName)
+	}
 	return s.GetPipelineRun(ctx, pr.ID)
 }
 

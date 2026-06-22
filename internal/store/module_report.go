@@ -25,6 +25,9 @@ func (s *Store) CreateModuleReport(ctx context.Context, pipelineRunID int, modul
 	if err != nil {
 		return nil, err
 	}
+	if mr.ID == 0 {
+		return s.GetModuleReportByKey(ctx, pipelineRunID, moduleName)
+	}
 	return s.GetModuleReport(ctx, mr.ID)
 }
 

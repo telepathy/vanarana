@@ -24,6 +24,9 @@ func (s *Store) UpsertRepository(ctx context.Context, repoURL string) (*model.Re
 	if err != nil {
 		return nil, err
 	}
+	if repo.ID == 0 {
+		return s.GetRepositoryByURL(ctx, repoURL)
+	}
 	return s.GetRepositoryByURL(ctx, repoURL)
 }
 
