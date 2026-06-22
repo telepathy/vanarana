@@ -139,7 +139,7 @@ func (s *Store) GetTrend(ctx context.Context, repoID int, moduleName string, lim
 func (s *Store) GetRepoModuleTrends(ctx context.Context, repoID int, days int) ([]model.ModuleTrendPoint, error) {
 	var points []model.ModuleTrendPoint
 	err := s.db.WithContext(ctx).Raw(`
-		SELECT mr.module_name, pr.build_id, UNIX_TIMESTAMP(pr.triggered_at), pr.triggered_at,
+		SELECT mr.module_name, pr.build_id, pr.triggered_at, CAST(UNIX_TIMESTAMP(pr.triggered_at) AS UNSIGNED) AS triggered_at_ts,
 		 COALESCE(jm.total_tests, 0), COALESCE(jm.total_tests - jm.failures, 0), COALESCE(jm.failures, 0),
 		 COALESCE(jm.success_rate, 0),
 		 COALESCE(jcm.line_coverage, 0), COALESCE(jcm.branch_coverage, 0)

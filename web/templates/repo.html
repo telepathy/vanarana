@@ -103,7 +103,15 @@
         }
 
         const colors = ['#e94560','#1a73e8','#2e7d32','#e65100','#8e24aa','#00838f','#c62828','#4527a0'];
-        const builds = [...new Set(moduleNames.flatMap(m => modules[m].map(p => p.build_id)))].sort((a,b) => (parseInt(a)||0)-(parseInt(b)||0));
+
+        const fmtDate = ts => {
+            const d = new Date(ts * 1000);
+            return d.getFullYear()+'-'+(d.getMonth()+1)+'-'+d.getDate();
+        };
+        const fmtDateShort = ts => {
+            const d = new Date(ts * 1000);
+            return (d.getMonth()+1)+'/'+d.getDate();
+        };
 
         // Build toggles
         let toggleBar = '<div class="toggle-bar"><span style="font-size:13px;color:#666;margin-right:8px">模块：</span>';
@@ -117,44 +125,63 @@
         section.innerHTML += '<div class="chart-card"><h3>用例数 &amp; 通过率</h3><div class="chart-col" style="min-height:320px"><canvas id="chart1"></canvas></div></div>';
         section.innerHTML += '<div class="chart-card"><h3>行覆盖率</h3><div class="chart-col" style="min-height:260px"><canvas id="chart2"></canvas></div></div>';
 
-        // Build datasets
-        function buildDatasets(metricFn) {
-            return moduleNames.map((m, i) => ({
-                label: m,
-                data: modules[m].map(metricFn),
-                borderColor: colors[i % colors.length],
-                backgroundColor: colors[i % colors.length]+'20',
-                tension: 0.3,
-                hidden: false
-            }));
-        }
-
         const ctx1 = document.getElementById('chart1').getContext('2d');
         const ctx2 = document.getElementById('chart2').getContext('2d');
 
         const datasets1 = [];
         moduleNames.forEach((m, i) => {
             const pts = modules[m];
-            datasets1.push({ label: m+' 用例数', data: pts.map(p => p.total_tests), borderColor: colors[i%colors.length], backgroundColor: colors[i%colors.length]+'20', tension: 0.3, yAxisID: 'y' });
-            datasets1.push({ label: m+' 通过率', data: pts.map(p => p.success_rate), borderColor: colors[i%colors.length], borderDash: [5,3], backgroundColor: 'transparent', tension: 0.3, yAxisID: 'y1', spanGaps: true });
+            datasets1.push({
+                label: m+' 用例数', yAxisID: 'y',
+                data: pts.map(p => ({ x: p.triggered_at_ts, y: p.total_tests })),
+                borderColor: colors[i%colors.length],
+                backgroundColor: colors[i%colors.length]+'20',
+                tension: 0.3
+            });
+            datasets1.push({
+                label: m+' 通过率', yAxisID: 'y1',
+                data: pts.map(p => ({ x: p.triggered_at_ts, y: p.success_rate })),
+                borderColor: colors[i%colors.length],
+                borderDash: [5,3],
+                backgroundColor: 'transparent',
+                tension: 0.3,
+                spanGaps: true
+            });
         });
 
         const datasets2 = moduleNames.map((m, i) => ({
             label: m,
-            data: modules[m].map(p => p.line_coverage),
+            data: modules[m].map(p => ({ x: p.triggered_at_ts, y: p.line_coverage })),
             borderColor: colors[i % colors.length],
             backgroundColor: colors[i % colors.length]+'40',
             tension: 0.3, fill: false
         }));
 
+        const xScale = {
+            type: 'linear',
+            title: { display: true, text: '日期' },
+            ticks: {
+                autoSkip: true, maxTicksLimit: 12,
+                callback: function(val) { return fmtDateShort(val); }
+            }
+        };
+
+        const tooltipTitle = function(ctx) {
+            return fmtDate(ctx[0].parsed.x);
+        };
+
         const chart1 = new Chart(ctx1, {
             type: 'line',
-            data: { labels: builds, datasets: datasets1 },
+            data: { datasets: datasets1 },
             options: {
                 responsive: true, maintainAspectRatio: false,
                 interaction: { mode: 'index', intersect: false },
-                plugins: { legend: { position: 'bottom' } },
+                plugins: {
+                    legend: { position: 'bottom' },
+                    tooltip: { callbacks: { title: tooltipTitle } }
+                },
                 scales: {
+                    x: xScale,
                     y: { type: 'linear', position: 'left', title: { display: true, text: '用例数' } },
                     y1: { type: 'linear', position: 'right', title: { display: true, text: '通过率 %' }, min: 0, max: 100, grid: { drawOnChartArea: false } }
                 }
@@ -163,12 +190,15 @@
 
         const chart2 = new Chart(ctx2, {
             type: 'line',
-            data: { labels: builds, datasets: datasets2 },
+            data: { datasets: datasets2 },
             options: {
                 responsive: true, maintainAspectRatio: false,
                 interaction: { mode: 'index', intersect: false },
-                plugins: { legend: { position: 'bottom' } },
-                scales: { y: { min: 0, max: 100, title: { display: true, text: '覆盖率 %' } } }
+                plugins: {
+                    legend: { position: 'bottom' },
+                    tooltip: { callbacks: { title: tooltipTitle } }
+                },
+                scales: { x: xScale, y: { min: 0, max: 100, title: { display: true, text: '覆盖率 %' } } }
             }
         });
 
