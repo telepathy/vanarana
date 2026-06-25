@@ -10,17 +10,18 @@ import (
 	"gorm.io/gorm/clause"
 )
 
-func (s *Store) CreateModuleReport(ctx context.Context, pipelineRunID int, moduleName, junitArchive, jacocoArchive string) (*model.ModuleReport, error) {
+func (s *Store) CreateModuleReport(ctx context.Context, pipelineRunID int, moduleName, junitArchive, jacocoArchive, otherArchive string) (*model.ModuleReport, error) {
 	mr := &model.ModuleReport{
 		PipelineRunID: pipelineRunID,
 		ModuleName:    moduleName,
 		JunitArchive:  junitArchive,
 		JacocoArchive: jacocoArchive,
+		OtherArchive:  otherArchive,
 		Status:        model.StatusProcessing,
 	}
 	err := s.db.WithContext(ctx).Clauses(clause.OnConflict{
 		Columns:   []clause.Column{{Name: "pipeline_run_id"}, {Name: "module_name"}},
-		DoUpdates: clause.AssignmentColumns([]string{"junit_archive", "jacoco_archive", "status"}),
+		DoUpdates: clause.AssignmentColumns([]string{"junit_archive", "jacoco_archive", "other_archive", "status"}),
 	}).Create(mr).Error
 	if err != nil {
 		return nil, err

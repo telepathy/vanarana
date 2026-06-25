@@ -32,6 +32,7 @@ type ModuleReport struct {
 	ModuleName    string    `gorm:"column:module_name;uniqueIndex:uk_module;size:255;not null" json:"module_name"`
 	JunitArchive  string    `gorm:"column:junit_archive;size:512;default:''" json:"junit_archive"`
 	JacocoArchive string    `gorm:"column:jacoco_archive;size:512;default:''" json:"jacoco_archive"`
+	OtherArchive  string    `gorm:"column:other_archive;size:512;default:''" json:"other_archive"`
 	Status        string    `gorm:"size:20;default:processing" json:"status"`
 	UploadTime    time.Time `gorm:"autoCreateTime" json:"upload_time"`
 }

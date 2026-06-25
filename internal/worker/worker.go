@@ -106,31 +106,35 @@ func (w *ParserWorker) process(ctx context.Context, reportID int) {
 		return junitMetrics, jacocoMetrics, nil
 	}
 
-	// Parse Junit
-	junitMetrics, _, err := extractAndParse(report.JunitArchive, "junit")
-	if err != nil {
-		log.Printf("worker: parse junit report %d: %v", reportID, err)
-		w.store.UpdateModuleReportStatus(ctx, reportID, model.StatusFailed)
-		return
-	}
-	if junitMetrics != nil {
-		junitMetrics.ReportID = reportID
-		if err := w.store.SaveJunitMetrics(ctx, reportID, junitMetrics); err != nil {
-			log.Printf("worker: save junit metrics %d: %v", reportID, err)
+	// Parse Junit (skip if not uploaded)
+	if report.JunitArchive != "" {
+		junitMetrics, _, err := extractAndParse(report.JunitArchive, "junit")
+		if err != nil {
+			log.Printf("worker: parse junit report %d: %v", reportID, err)
+			w.store.UpdateModuleReportStatus(ctx, reportID, model.StatusFailed)
+			return
+		}
+		if junitMetrics != nil {
+			junitMetrics.ReportID = reportID
+			if err := w.store.SaveJunitMetrics(ctx, reportID, junitMetrics); err != nil {
+				log.Printf("worker: save junit metrics %d: %v", reportID, err)
+			}
 		}
 	}
 
-	// Parse Jacoco
-	_, jacocoMetrics, err := extractAndParse(report.JacocoArchive, "jacoco")
-	if err != nil {
-		log.Printf("worker: parse jacoco report %d: %v", reportID, err)
-		w.store.UpdateModuleReportStatus(ctx, reportID, model.StatusFailed)
-		return
-	}
-	if jacocoMetrics != nil {
-		jacocoMetrics.ReportID = reportID
-		if err := w.store.SaveJacocoMetrics(ctx, reportID, jacocoMetrics); err != nil {
-			log.Printf("worker: save jacoco metrics %d: %v", reportID, err)
+	// Parse Jacoco (skip if not uploaded)
+	if report.JacocoArchive != "" {
+		_, jacocoMetrics, err := extractAndParse(report.JacocoArchive, "jacoco")
+		if err != nil {
+			log.Printf("worker: parse jacoco report %d: %v", reportID, err)
+			w.store.UpdateModuleReportStatus(ctx, reportID, model.StatusFailed)
+			return
+		}
+		if jacocoMetrics != nil {
+			jacocoMetrics.ReportID = reportID
+			if err := w.store.SaveJacocoMetrics(ctx, reportID, jacocoMetrics); err != nil {
+				log.Printf("worker: save jacoco metrics %d: %v", reportID, err)
+			}
 		}
 	}
 
