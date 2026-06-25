@@ -57,13 +57,11 @@ func (h *UploadHandler) Handle(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Validate file fields exist
-	if _, _, err := r.FormFile("junit"); err != nil {
-		writeError(w, http.StatusBadRequest, "junit file is required")
-		return
-	}
-	if _, _, err := r.FormFile("jacoco"); err != nil {
-		writeError(w, http.StatusBadRequest, "jacoco file is required")
+	// Validate file fields - at least one of junit/jacoco required
+	_, hasJunit := r.FormFile("junit")
+	_, hasJacoco := r.FormFile("jacoco")
+	if hasJunit != nil && hasJacoco != nil {
+		writeError(w, http.StatusBadRequest, "at least one of junit or jacoco file is required")
 		return
 	}
 
@@ -86,20 +84,32 @@ func (h *UploadHandler) Handle(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Save archive files
-	junitName, err := saveFile(r, "junit", h.arch, pipelineRun.ID, req.ModuleName)
-	if err != nil {
-		writeError(w, http.StatusInternalServerError, fmt.Sprintf("save junit: %v", err))
-		return
+	var junitName, jacocoName, otherName string
+	if hasJunit == nil {
+		junitName, err = saveFile(r, "junit", h.arch, pipelineRun.ID, req.ModuleName)
+		if err != nil {
+			writeError(w, http.StatusInternalServerError, fmt.Sprintf("save junit: %v", err))
+			return
+		}
 	}
-	jacocoName, err := saveFile(r, "jacoco", h.arch, pipelineRun.ID, req.ModuleName)
-	if err != nil {
-		writeError(w, http.StatusInternalServerError, fmt.Sprintf("save jacoco: %v", err))
-		return
+	if hasJacoco == nil {
+		jacocoName, err = saveFile(r, "jacoco", h.arch, pipelineRun.ID, req.ModuleName)
+		if err != nil {
+			writeError(w, http.StatusInternalServerError, fmt.Sprintf("save jacoco: %v", err))
+			return
+		}
+	}
+	if _, _, err := r.FormFile("other_file"); err == nil {
+		otherName, err = saveFile(r, "other_file", h.arch, pipelineRun.ID, req.ModuleName)
+		if err != nil {
+			writeError(w, http.StatusInternalServerError, fmt.Sprintf("save other_file: %v", err))
+			return
+		}
 	}
 
 	// Create module report
 	moduleReport, err := h.store.CreateModuleReport(
-		r.Context(), pipelineRun.ID, req.ModuleName, junitName, jacocoName,
+		r.Context(), pipelineRun.ID, req.ModuleName, junitName, jacocoName, otherName,
 	)
 	if err != nil {
 		log.Printf("create module_report: %v", err)
