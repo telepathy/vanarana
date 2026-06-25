@@ -65,15 +65,18 @@ go build -o vanarana ./cmd/server/
 POST /api/v1/reports
 Content-Type: multipart/form-data
 
-repo_url          string  仓库地址
-module_name       string  模块名
-pipeline_job_name string  作业名
-build_id          string  构建号
+repo_url          string  仓库地址（必填）
+module_name       string  模块名（必填）
+pipeline_job_name string  作业名（必填）
+build_id          string  构建号（可选）
 branch            string  分支（可选）
 commit_hash       string  提交 SHA（可选）
-jacoco            file    jacocoHtml.tar.gz
-junit             file    reports.tar.gz
+junit             file    reports.tar.gz（junit/jacoco 至少一个）
+jacoco            file    jacocoHtml.tar.gz（junit/jacoco 至少一个）
+other_file        file    其他文件 .tar.gz（可选）
 ```
+
+> 所有上传文件必须为 gzip 压缩格式（`.tar.gz`）。`junit` 和 `jacoco` 至少上传一个，也可同时上传。`other_file` 为可选附加文件。
 
 ### 查询接口
 
@@ -112,6 +115,7 @@ POST {NEUTRON_URL}/api/report/{jobName}/link
 MODULE_NAME="my-project-core"
 PIPELINE_JOB_NAME="PR-check"
 
+# 至少打包 junit 或 jacoco 其中一个
 tar czf jacocoHtml.tar.gz -C build/reports jacoco/test/html
 tar czf junitReports.tar.gz -C build/reports tests/test
 
@@ -122,8 +126,8 @@ curl -X POST ${VANARANA_URL}/api/v1/reports \
   -F "build_id=${CI_BUILD_ID}" \
   -F "branch=${CI_COMMIT_BRANCH}" \
   -F "commit_hash=${CI_COMMIT_SHA}" \
-  -F "jacoco=@jacocoHtml.tar.gz" \
-  -F "junit=@junitReports.tar.gz"
+  -F "junit=@junitReports.tar.gz" \
+  -F "jacoco=@jacocoHtml.tar.gz"
 ```
 
 ## 项目结构
